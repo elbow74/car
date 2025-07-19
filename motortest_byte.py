@@ -101,7 +101,7 @@ try:
 			send_packet(1, 1, 1, 1)
 			
 		elif cmd == "rgb":
-			send_packet(1, 1, 0, 0)
+			send_packet(1, 1, 0, 1)
 			
 		elif cmd == "q":
 			print("Quitting...")
