@@ -63,6 +63,8 @@ motorSpeed = 50
 tunedMotorSpeed = 50 - 3
 motorTurnSpeed = int(motorSpeed * 0.5)
 
+RGB_STATUS = 0
+
 print(f"Current motor speed is: {motorSpeed}")
 print(f"Tuned motor speed (RIGHT) is: {tunedMotorSpeed}")
 
@@ -101,7 +103,12 @@ try:
 			send_packet(1, 1, 1, 1)
 			
 		elif cmd == "rgb":
-			send_packet(1, 1, 0, 1)
+			RGB_STATUS = !RGB_STATUS
+			
+			if RGB_STATUS:
+				send_packet(1, 1, 0, 1)
+			else:
+				send_packet(1, 1, 0, 0)
 			
 		elif cmd == "q":
 			print("Quitting...")
