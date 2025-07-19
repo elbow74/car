@@ -3,27 +3,34 @@ import time
 from ultralytics import YOLO
 import serial
 
-def send_packet(packet):
-    ser.write(packet.encode())
-    time.sleep(0.2)
-    print("Sent:", packet)
+def send_packet(left_speed, left_dir, right_speed, right_dir):
+	packet = bytearray([
+	ord('L'),
+	left_speed,
+	left_dir,
+	ord('R'),
+	right_speed,
+	right_dir])
+	ser.write(packet)
 
 
 tracker = None
 tracking = False
 
 # default directions
-STOP = "<LEFT,0,1,RIGHT,0,1>"
-FORWARD = "<LEFT,30,1,RIGHT,30,1>"
-LEFT = "<LEFT,15,1,RIGHT,30,1>"
-RIGHT = "<LEFT,30,1,RIGHT,15,1>"
-
-
+STOP = [0,1,0,1]
+FORWARD = [30, 0, 30, 0]
+LEFT = [15, 0, 30, 0]
+RIGHT = [30, 0, 15, 0]
+ROTATE = [25, 1, 25, 0]
+RGB_ON = [1, 1, 0, 1]
+RGB_OFF = [1, 1, 0, 0]
+BUZZER_TOGGLE = [1,1,1,1]
+RGB = False
 
 # Defining Serial
 ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=0)
 time.sleep(2)  # Give Arduino time to reset
-
 
 # Load YOLOv8n model
 model = YOLO("yolov8n.pt")
@@ -37,14 +44,13 @@ if not cap.isOpened():
 	print("Camera not connected")
 	exit()
 
-
 # Confirm webcam opens
 ret, frame = cap.read()
 frame = cv2.resize(frame, (320, 160))
 
 if not ret:
-    print("? Cannot open webcam.")
-    exit()
+	print("? Cannot open webcam.")
+	exit()
 
 # Get actual frame center based on resolution
 frame_center_x = frame.shape[1] // 2  # width
@@ -63,9 +69,9 @@ prev_dir = 0
 
 try:
 	while True:
-		ret, frame_old = cap.read()
-		
 
+				
+		ret, frame_old = cap.read()
 		
 		print("error_x: ", error_x)
 		print("current_dir: ", current_dir)
@@ -77,18 +83,17 @@ try:
 			continue
 
 		frame_count += 1
-		
-		if not tracking:
-			send_packet(STOP)
+			
+
 
 		# Run YOLO detection every N frames or if not -=tracking
 		if frame_count % DETECT_EVERY == 0 or not tracking:
+
 			# results obj (bounding boxes, class IDs, confidence)
 			results = model(frame, verbose=False) # access with results[i].boxes/.conf/.cls
 			last_results = results
 			
 			print("==================== Updated YOLO ====================")
-			
 
 			found = False
 			for r in results:
@@ -96,6 +101,9 @@ try:
 					cls = int(box.cls[0])
 					conf = float(box.conf[0])
 					if cls == 0 and conf > 0.50:  # Person class
+						print("====================  FOUND SIGMA TARGET ====================")
+						print("====================  FOUND SIGMA TARGET ====================")
+
 						x1, y1, x2, y2 = map(int, box.xyxy[0])
 						w, h = x2 - x1, y2 - y1
 						tracker = cv2.legacy.TrackerMOSSE_create()
@@ -107,13 +115,13 @@ try:
 						tracking = False
 				if found:
 					break
-					
-	   
 
 		# Track person
 		if tracking and tracker is not None:
+			print("====================  Attempting track using MOSSE ==================== ")
 			success, box = tracker.update(frame)
 			if success: 
+				print("==================== Person found using MOSSE, following ==================== ")
 				x, y, w, h = map(int, box)
 				
 				center_x = x + w // 2
@@ -134,13 +142,16 @@ try:
 				# Direction decision
 				if prev_dir != current_dir:
 					prev_dir = current_dir
-					send_packet(current_dir)
-					
+					send_packet(*current_dir)
+					print("==================== Sent new direction packet to motor ====================")
 				
 			else:
 				print("==================== TRACKER LOST TARGET ====================")
+				print("==================== TRACKER LOST TARGET ====================")
+				print("==================== TRACKER LOST TARGET ====================")
+				
 				tracking = False
-				send_packet(STOP)
+				send_packet(*STOP)
 				current_dir = STOP
 				
 		# Draw center lines
@@ -159,7 +170,7 @@ try:
 			break
 			
 except KeyboardInterrupt:
-	send_packet(STOP)
+	send_packet(*STOP)
 	cap.release()
 	cv2.destroyAllWindows()
 	print("Quit program")
