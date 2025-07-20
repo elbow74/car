@@ -89,10 +89,21 @@ tracker = None
 tracking = False
 
 # default directions
+
+motorSpeed = 50
+
 STOP = [0,1,0,1]
-FORWARD = [30, 0, 30, 0]
-LEFT = [15, 0, 30, 0]
-RIGHT = [30, 0, 15, 0]
+FORWARD = [motorSpeed, 0, motorSpeed, 0]
+
+LEFT_LOW  = [int(motorSpeed * 0.7), 0, motorSpeed, 0]
+LEFT_MID  = [int(motorSpeed * 0.4), 0, motorSpeed, 0]
+LEFT_HIGH = [int(motorSpeed * 0.2), 0, motorSpeed, 0]
+
+RIGHT_LOW  = [motorSpeed, 0, int(motorSpeed * 0.7), 0]
+RIGHT_MID  = [motorSpeed, 0, int(motorSpeed * 0.4), 0]
+RIGHT_HIGH = [motorSpeed, 0, int(motorSpeed * 0.2), 0]
+
+
 ROTATE = [50, 1, 50, 0]
 RGB_ON = [1, 1, 0, 1]
 RGB_OFF = [1, 1, 0, 0]
@@ -206,13 +217,21 @@ try:
 				cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 				cv2.putText(frame, f"Person {current_conf:.2f}", (x, y - 10),
 							cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+							    
+				abs_error = abs(error_x)
 
-				if error_x < -20:
-					current_dir = LEFT
-				elif error_x > 20:
-					current_dir = RIGHT
+				if abs_error < 30:
+				    print("==================== MOTOR: FWD ====================")
+				    current_dir = FORWARD
+				elif abs_error < 70:
+				    print("==================== MOTOR: LOW ====================")
+				    current_dir = LEFT_LOW if error_x < 0 else RIGHT_LOW
+				elif abs_error < 100:
+				    print("==================== MOTOR: MID ====================")
+				    current_dir = LEFT_MID if error_x < 0 else RIGHT_MID
 				else:
-					current_dir = FORWARD
+				    print("==================== MOTOR: HIGH ===================")
+				    current_dir = LEFT_HIGH if error_x < 0 else RIGHT_HIGH
 				
 				# Direction decision
 				send_packet(*current_dir)
